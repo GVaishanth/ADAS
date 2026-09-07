@@ -1,0 +1,36 @@
+# ==========================================================
+#  ADAS - master requirements.txt
+#  Grouped by which module each dependency is for.
+# ==========================================================
+
+# ---- Always (webcam, IO, math) ----------------------------
+numpy>=1.24
+pandas>=2.0
+opencv-python>=4.8
+Pillow>=10.0
+matplotlib>=3.7
+scikit-learn>=1.2
+tqdm>=4.65
+
+# ---- Algorithm 1: Preprocessing + algorithms 2-5, 8, 9 ----
+torch>=2.0
+torchvision>=0.15
+
+# ---- Model training / image backbones (2,3,4,5,8,9) -------
+# One stack gives us all four comparative models + many more
+timm>=1.0
+
+# ---- Algorithm 6: YOLOv8 -----------------------------------
+ultralytics>=8.2
+
+# ---- Algorithm 9: Semantic segmentation (HuggingFace) ------
+transformers>=4.40
+
+# ---- Backend: optional FastAPI server that bridges the React
+#      frontend (custom 'adas-detection' window event) to our ML pipeline
+#      (this is the ONE boundary between the ML scope and the
+#      frontend scope; we add only what is needed).
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9               # for image upload
+

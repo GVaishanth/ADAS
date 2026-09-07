@@ -1,0 +1,241 @@
+{
+  "args": {
+    "backbone": "convnext",
+    "epochs": 30,
+    "batch_size": 8,
+    "lr": 0.001,
+    "warmup": 1,
+    "pretrained": true,
+    "augment": true,
+    "mixup": 0.2,
+    "cutmix": 0.2,
+    "smoothing": 0.1,
+    "patience": 6,
+    "num_workers": 0,
+    "out": null
+  },
+  "best_epoch": 15,
+  "best_val_acc": 0.99,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 0.8344,
+      "train_acc": 0.6891,
+      "val_loss": 0.572,
+      "val_acc": 0.93,
+      "lr": 0.001,
+      "latency_ms": 74.44,
+      "wall_seconds": 570.8
+    },
+    {
+      "epoch": 1,
+      "train_loss": 0.6433,
+      "train_acc": 0.8216,
+      "val_loss": 0.5828,
+      "val_acc": 0.94,
+      "lr": 0.0009970689785771798,
+      "latency_ms": 74.14,
+      "wall_seconds": 583.03
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.5822,
+      "train_acc": 0.8273,
+      "val_loss": 0.5671,
+      "val_acc": 0.935,
+      "lr": 0.0009883102778550433,
+      "latency_ms": 73.49,
+      "wall_seconds": 574.66
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5768,
+      "train_acc": 0.8254,
+      "val_loss": 0.5364,
+      "val_acc": 0.965,
+      "lr": 0.0009738265855914012,
+      "latency_ms": 80.34,
+      "wall_seconds": 614.81
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.557,
+      "train_acc": 0.8354,
+      "val_loss": 0.5412,
+      "val_acc": 0.955,
+      "lr": 0.0009537877098354786,
+      "latency_ms": 77.55,
+      "wall_seconds": 610.9
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.5401,
+      "train_acc": 0.8574,
+      "val_loss": 0.5123,
+      "val_acc": 0.97,
+      "lr": 0.0009284285880837946,
+      "latency_ms": 79.18,
+      "wall_seconds": 610.28
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.5464,
+      "train_acc": 0.8536,
+      "val_loss": 0.565,
+      "val_acc": 0.93,
+      "lr": 0.0008980465328528219,
+      "latency_ms": 77.97,
+      "wall_seconds": 614.14
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.5231,
+      "train_acc": 0.8649,
+      "val_loss": 0.5412,
+      "val_acc": 0.97,
+      "lr": 0.0008629977459615654,
+      "latency_ms": 77.78,
+      "wall_seconds": 613.45
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.5207,
+      "train_acc": 0.8637,
+      "val_loss": 0.5187,
+      "val_acc": 0.975,
+      "lr": 0.0008236931423909139,
+      "latency_ms": 78.69,
+      "wall_seconds": 614.02
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.5013,
+      "train_acc": 0.8838,
+      "val_loss": 0.485,
+      "val_acc": 0.985,
+      "lr": 0.0007805935326811911,
+      "latency_ms": 78.49,
+      "wall_seconds": 620.86
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.5166,
+      "train_acc": 0.8467,
+      "val_loss": 0.5658,
+      "val_acc": 0.94,
+      "lr": 0.0007342042203498951,
+      "latency_ms": 78.12,
+      "wall_seconds": 619.38
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.5126,
+      "train_acc": 0.8844,
+      "val_loss": 0.5409,
+      "val_acc": 0.96,
+      "lr": 0.0006850690776699573,
+      "latency_ms": 78.11,
+      "wall_seconds": 617.55
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.4903,
+      "train_acc": 0.8643,
+      "val_loss": 0.4755,
+      "val_acc": 0.98,
+      "lr": 0.0006337641692646106,
+      "latency_ms": 79.03,
+      "wall_seconds": 622.95
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.4818,
+      "train_acc": 0.8737,
+      "val_loss": 0.4913,
+      "val_acc": 0.97,
+      "lr": 0.0005808909982763825,
+      "latency_ms": 79.39,
+      "wall_seconds": 617.84
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.4679,
+      "train_acc": 0.9045,
+      "val_loss": 0.4754,
+      "val_acc": 0.98,
+      "lr": 0.0005270694542927088,
+      "latency_ms": 78.6,
+      "wall_seconds": 619.43
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.4743,
+      "train_acc": 0.8964,
+      "val_loss": 0.4712,
+      "val_acc": 0.99,
+      "lr": 0.00047293054570729125,
+      "latency_ms": 79.16,
+      "wall_seconds": 621.16
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.4583,
+      "train_acc": 0.8888,
+      "val_loss": 0.465,
+      "val_acc": 0.985,
+      "lr": 0.00041910900172361764,
+      "latency_ms": 78.11,
+      "wall_seconds": 618.45
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.4548,
+      "train_acc": 0.8756,
+      "val_loss": 0.4683,
+      "val_acc": 0.99,
+      "lr": 0.0003662358307353897,
+      "latency_ms": 78.94,
+      "wall_seconds": 618.76
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.4779,
+      "train_acc": 0.8769,
+      "val_loss": 0.4774,
+      "val_acc": 0.98,
+      "lr": 0.0003149309223300428,
+      "latency_ms": 78.45,
+      "wall_seconds": 620.9
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.469,
+      "train_acc": 0.8807,
+      "val_loss": 0.4665,
+      "val_acc": 0.985,
+      "lr": 0.000265795779650105,
+      "latency_ms": 78.2,
+      "wall_seconds": 620.37
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.4492,
+      "train_acc": 0.892,
+      "val_loss": 0.4712,
+      "val_acc": 0.985,
+      "lr": 0.00021940646731880887,
+      "latency_ms": 79.1,
+      "wall_seconds": 617.38
+    },
+    {
+      "epoch": 21,
+      "train_loss": 0.467,
+      "train_acc": 0.8964,
+      "val_loss": 0.4671,
+      "val_acc": 0.985,
+      "lr": 0.00017630685760908622,
+      "latency_ms": 78.92,
+      "wall_seconds": 624.75
+    }
+  ]
+}

@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ADAS Tester — Perception Modules</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#11161f; --panel2:#151c28; --line:#1e2836;
+    --ink:#e8eef6; --dim:#8d9bb0; --accent:#4f9cff; --good:#34d399;
+    --warn:#fbbf24; --danger:#f87171; --muted:#5b6b80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent)}
+  h1{font-size:20px;margin:0}
+  h2{font-size:14px;margin:0 0 8px;letter-spacing:.3px}
+  .wrap{padding:16px 20px 40px;max-width:1280px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:14px;justify-content:space-between;
+       padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;
+       background:rgba(10,14,20,.96);z-index:20}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+        background:linear-gradient(135deg,#2563eb,#06b6d4);font-weight:700;color:#fff}
+  .sub{color:var(--dim);font-size:12px}
+  .health{display:flex;align-items:center;gap:8px;font-size:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+  .dot.ok{background:var(--good)} .dot.bad{background:var(--danger)}
+  nav.tabs{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--line);
+           background:var(--bg);position:sticky;top:63px;z-index:15}
+  .tab{padding:7px 14px;border-radius:8px;cursor:pointer;color:var(--dim);
+       border:1px solid transparent;user-select:none}
+  .tab.on{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .tab:hover{color:var(--ink)}
+  .page{display:none;padding-top:16px}
+  .page.on{display:block}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  @media(max-width:900px){.g2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{background:var(--accent);color:#04101f;border:0;border-radius:8px;
+         padding:9px 16px;font-weight:600;cursor:pointer;font-size:13px}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  input[type=file]{color:var(--dim)}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;
+        color:var(--dim);cursor:pointer;background:var(--panel)}
+  .drop.hover{border-color:var(--accent);color:var(--ink)}
+  .thumb{max-width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+  .badge{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--panel2);
+         border:1px solid var(--line);color:var(--dim)}
+  .badge.good{color:var(--good);border-color:rgba(52,211,153,.35)}
+  .badge.warn{color:var(--warn);border-color:rgba(251,191,36,.35)}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;
+      border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--dim)} .kv b{font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--dim);font-weight:600}
+  td.num{font-variant-numeric:tabular-nums}
+  tr.hi td{background:rgba(79,156,255,.08)}
+  .muted{color:var(--muted)} .err{color:var(--danger)}
+  .chip{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;
+        margin:2px;background:var(--panel2);border:1px solid var(--line)}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);
+           border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;
+           vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  details summary{cursor:pointer;color:var(--accent)}
+  .progress{height:6px;background:var(--panel2);border-radius:999px;overflow:hidden;margin:6px 0}
+  .progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+  canvas.chart{width:100%;height:auto}
+  .banner{background:#0b1a2b;border:1px solid #1c3a5e;color:#cfe4ff;border-radius:10px;
+          padding:10px 14px;margin-bottom:8px;font-size:12.5px}
+  code{background:#0d1420;padding:2px 6px;border-radius:5px;font-size:12px}
+  .grid-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .metric{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .metric .v{font-size:20px;font-weight:700} .metric .l{color:var(--dim);font-size:11px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">
+    <div class="mark">A</div>
+    <div>
+      <h1>ADAS Tester</h1>
+      <div class="sub">Perception modules &amp; transformer comparison</div>
+    </div>
+  </div>
+  <div class="health" id="health">
+    <span class="dot" id="hdot"></span><span id="htxt">checking…</span>
+  </div>
+</div>
+
+<nav class="tabs">
+  <div class="tab on" data-p="image">Test image</div>
+  <div class="tab" data-p="video">Test video</div>
+  <div class="tab" data-p="live">Live / webcam bridge</div>
+  <div class="tab" data-p="compare">Model comparison</div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ================= IMAGE ================= -->
+  <section class="page on" id="page-image">
+    <div class="grid g2">
+      <div class="card">
+        <h2>Upload a road image</h2>
+        <div class="banner">The image is piped through weather classification (ViT/Swin/ConvNeXt/EfficientFormer), YOLO object detection, lane detection, traffic-sign recognition and semantic segmentation.</div>
+        <div class="row">
+          <label class="drop" id="imgdrop" style="flex:1;display:block">
+            <span id="imgdroptxt">Drop / choose a .jpg or .png</span>
+            <input type="file" id="imgfile" accept="image/*" style="display:none">
+          </label>
+          <button id="imgrun" disabled>Analyze</button>
+        </div>
+        <div id="imgstatus" class="muted" style="margin-top:10px"></div>
+        <div id="imginfo" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h2>Annotated result</h2>
+        <img id="imgout" class="thumb" style="display:none" alt="annotated result">
+        <div id="imgplaceholder" class="muted" style="padding:40px 0;text-align:center">
+          No image analysed yet.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="imgtasks" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))"></div>
+  </section>
+
+  <!-- ================= VIDEO ================= -->
+  <section class="page" id="page-video">
+    <div class="banner">Processes a driving clip through the same full pipeline, writes an annotated MP4, and reports per-frame throughput.</div>
+    <div class="row" style="margin-bottom:12px">
+      <label class="drop" id="viddrop" style="flex:1;display:block">
+        <span id="viddroptxt">Drop / choose a .mp4 (or .avi, .mov)</span>
+        <input type="file" id="vidfile" accept="video/*" style="display:none">
+      </label>
+      <button id="vidrun" disabled>Analyze video</button>
+      <label class="muted">Max frames <input type="number" id="vidmax" value="120" min="1" style="width:70px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
+    </div>
+    <div class="progress"><i id="vidprog"></i></div>
+    <div id="vidstatus" class="muted"></div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <h2>Sample annotated frame</h2>
+        <img id="vidout" class="thumb" style="display:none" alt="sample frame">
+        <div id="vidplaceholder" class="muted" style="padding:40px 0;text-align:center">No video analysed yet.</div>
+      </div>
+      <div class="card">
+        <h2>Video stats</h2>
+        <div id="vidinfo"></div>
+        <div style="margin-top:12px">
+          <button class="ghost" id="viddl" style="display:none">Download annotated video</button>
+          <a id="vidlink" target="_blank" rel="noopener" style="display:none;margin-left:10px;font-size:12.5px">Open annotated video</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LIVE / BRIDGE ================= -->
+  <section class="page" id="page-live">
+    <div class="grid g2">
+      <div class="card">
+        <h2>Live camera perception</h2>
+        <p class="muted">Starts the laptop camera, posts each frame to <code>/detect</code>, and renders the perception packets live. The same packets are emitted as the <code>adas-detection</code> window event that the <b>untouched driver-assistance frontend</b> consumes.</p>
+        <div class="row">
+          <button id="livebtn">Start live</button>
+          <button class="ghost" id="liveredraw" disabled>Redraw last</button>
+        </div>
+        <video id="livevid" autoplay muted playsinline style="width:100%;max-height:420px;margin-top:12px;border-radius:10px;border:1px solid var(--line);background:#000" hidden></video>
+        <canvas id="livecanvas" style="width:100%;max-height:420px;margin-top:12px;border-radius:10px;border:1px solid var(--line);background:#000"></canvas>
+      </div>
+      <div class="card">
+        <h2>Detection packet</h2>
+        <div class="muted" style="margin-bottom:8px">Emits <code>adas-detection</code>:</div>
+        <pre id="livejson" style="background:#0d1420;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11.5px;max-height:460px;overflow:auto;white-space:pre-wrap"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARISON ================= -->
+  <section class="page" id="page-compare">
+    <div class="grid" style="grid-template-columns:1.3fr 1fr">
+      <div class="card">
+        <h2>Four-backbone comparison (Task 1)</h2>
+        <p class="muted">Same BDD weather-ish split, same preprocessing, same training budget — only the backbone differs. Data from <code>/comparison</code> (results/comparison.json).</p>
+        <div style="overflow:auto">
+          <table id="comptbl">
+            <thead><tr>
+              <th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th>
+              <th>Latency (ms)</th><th>FPS</th><th>Size</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="muted" id="compnote" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2>Accuracy vs F1</h2>
+        <canvas id="compchart" class="chart" width="460" height="300"></canvas>
+      </div>
+    </div>
+    <div class="banner" style="margin-top:16px">
+      <b>How to run the comparison yourself</b> (from <code>ADAS/</code>):
+      <code>python -m algorithms._shared.run_comparison --pretrained --epochs 30</code>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =================== helpers =================== */
+const $=s=>document.querySelector(s);
+const API = '';   // same origin
+function setStatus(el,txt,type){ el.textContent=txt; el.className='muted'+(type?' '+type:''); }
+function esc(s){ return (s==null?'':String(s)); }
+
+/* =================== tabs =================== */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('page-'+t.dataset.p).classList.add('on');
+  if(t.dataset.p==='compare') loadComparison();
+}));
+
+/* =================== health =================== */
+async function health(){
+  try{
+    const r=await fetch(API+'/health'); const j=await r.json();
+    const t=j.models.tasks;
+    const ready='ready' in Object.keys(t)||true;
+    const bad=Object.entries(j.models.errors).length?Object.values(j.models.errors).length>0:false;
+    const dot=$('#hdot');
+    const anyReady=Object.values(t).some(v=>v==='ready');
+    dot.className='dot '+(anyReady?'ok':'bad');
+    $('#htxt').textContent='service ok · '+(anyReady?Object.values(t).filter(v=>v==='ready').length+' model(s) ready':'no models ready');
+  }catch(e){
+    $('#hdot').className='dot bad'; $('#htxt').textContent='backend offline — start uvicorn on :8000';
+  }
+}
+health();
+
+/* =================== image tab =================== */
+let currentImg=null;
+(function(){
+  const drop=$('#imgdrop'), file=$('#imgfile'), run=$('#imgrun');
+  file.addEventListener('change',()=>{ if(file.files.length){ currentImg=file.files[0]; $('#imgdroptxt').textContent=currentImg.name; run.disabled=false; } });
+  drop.addEventListener('click',()=>file.click());
+  ['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hover');}));
+  ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hover');}));
+  drop.addEventListener('drop',ev=>{ if(ev.dataTransfer.files.length){ currentImg=ev.dataTransfer.files[0]; $('#imgdroptxt').textContent=currentImg.name; run.disabled=false; }});
+
+  run.addEventListener('click',async()=>{
+    if(!currentImg) return;
+    run.disabled=true; setStatus($('#imgstatus'),'analysing… fetch models'); 
+    const fd=new FormData(); fd.append('file',currentImg);
+    try{
+      const r=await fetch(API+'/analyze',{method:'POST',body:fd});
+      if(!r.ok){ const e=await r.json(); throw new Error(e.error||('HTTP '+r.status)); }
+      const j=await r.json();
+      showImage(j);
+    }catch(e){ setStatus($('#imgstatus'),'error: '+e.message,'err'); }
+    run.disabled=false;
+  });
+})();
+
+function showImage(j){
+  const errs=j.tasks?Object.entries(j.tasks).filter(([k,v])=>v.status&&v.status==='error'):[];
+  setStatus($('#imgstatus'),`done in ${j.inference_time_ms} ms${errs.length?(' · '+errs.length+' module(s) skipped'):''}`, errs.length?'warn':'');
+  if(j.image_base64){ $('#imgout').src='data:image/jpeg;base64,'+j.image_base64; $('#imgout').style.display='block'; $('#imgplaceholder').style.display='none'; }
+  renderTaskCards(j.tasks||{});
+  const i=j.info||{};
+  $('#imginfo').innerHTML='<div class="row">'+
+    '<span class="badge">WX '+(i.weather||'—')+'</span>'+
+    '<span class="badge">objs '+esc(i.objects)+'</span>'+
+    '<span class="badge">lanes '+esc(i.lanes)+'</span>'+
+    '<span class="badge">seg '+esc(i.seg_classes)+' cls</span>'+
+    '<span class="badge">sign '+(i.sign?esc(i.sign):'—')+'</span></div>';
+}
+
+function renderTaskCards(tasks){
+  const box=$('#imgtasks'); const defs={
+    weather:{t:'Weather classification', k:'prediction'},
+    objects:{t:'Object detection', k:'count'},
+    lanes:{t:'Lane detection', k:'lanes'},
+    signs:{t:'Traffic sign', k:'signs'},
+    seg:{t:'Semantic segmentation', k:'seg'}
+  };
+  box.innerHTML='';
+  Object.entries(tasks).forEach(([k,v])=>{
+    const card=document.createElement('div'); card.className='card';
+    let body='<div class="muted">loading…</div>';
+    if(v.status==='error') body='<div class="err">'+esc(v.error)+'</div>';
+    else body=taskBody(k,v);
+    card.innerHTML='<h2>'+esc(defs[k]?defs[k].t:k)+'</h2>'+body+
+      '<div class="kv" style="margin-top:8px"><span>inf. time</span><b>'+esc(v.inference_time_ms)+' ms</b></div>';
+    box.appendChild(card);
+  });
+}
+
+function taskBody(k,v){
+  if(k==='weather'){
+    let top=(v.results&&v.results.top_k)||[];
+    return '<div class="kv"><span>prediction</span><b>'+esc(v.prediction)+'</b></div>'+
+      '<div class="kv"><span>confidence</span><b>'+Math.round((v.confidence||0)*100)+'%</b></div>'+
+      '<div style="margin-top:6px">'+top.map(t=>'<span class="chip">'+esc(t.class)+' '+Math.round((t.confidence||0)*100)+'%</span>').join('')+'</div>';
+  }
+  if(k==='objects'){
+    const d=(v.results&&v.results.detections)||[];
+    if(!d.length) return '<div class="muted">No objects detected.</div>';
+    return '<div class="kv"><span>count</span><b>'+d.length+'</b></div>'+
+      '<div style="margin-top:6px">'+d.slice(0,14).map(o=>'<span class="chip">'+esc(o.class)+' '+Math.round(o.confidence*100)+'%</span>').join('')+
+      (d.length>14?' <span class="muted">+'+(d.length-14)+'</span>':'')+'</div>';
+  }
+  if(k==='lanes'){
+    const n=(v.results&&v.results.num_lanes)||0;
+    return '<div class="kv"><span>lanes found</span><b>'+n+'</b></div>'+
+      '<div class="kv"><span>mode</span><b>'+esc((v.results&&v.results.mode)||'classical')+'</b></div>'+
+      '<div class="muted">'+ (n?n+' lane line(s) fitted':'no lane lines in frame')+'</div>';
+  }
+  if(k==='signs'){
+    let top=(v.results&&v.results.top_k)||[];
+    return '<div class="kv"><span>prediction</span><b>'+esc(v.prediction)+'</b></div>'+
+      '<div class="kv"><span>confidence</span><b>'+Math.round((v.confidence||0)*100)+'%</b></div>'+
+      '<div style="margin-top:6px">'+top.slice(0,3).map(t=>'<span class="chip">'+esc(t.class_name)+'</span>').join('')+'</div>';
+  }
+  if(k==='seg'){
+    const cl=(v.results&&v.results.classes)||[];
+    return '<div class="kv"><span>classes</span><b>'+(v.results&&v.results.num_classes||0)+'</b></div>'+
+      '<div style="margin-top:6px">'+cl.slice(0,10).map(c=>'<span class="chip">'+esc(c.class_name)+' '+esc(c.percent)+'%</span>').join('')+'</div>';
+  }
+  return '';
+}
+
+/* =================== video tab =================== */
+let currentVid=null;
+(function(){
+  const drop=$('#viddrop'), file=$('#vidfile'), run=$('#vidrun');
+  file.addEventListener('change',()=>{ if(file.files.length){ currentVid=file.files[0]; $('#viddroptxt').textContent=currentVid.name; run.disabled=false; } });
+  drop.addEventListener('click',()=>file.click());
+  ['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hover');}));
+  ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hover');}));
+  drop.addEventListener('drop',ev=>{ if(ev.dataTransfer.files.length){ currentVid=ev.dataTransfer.files[0]; $('#viddroptxt').textContent=currentVid.name; run.disabled=false; }});
+
+  run.addEventListener('click',async()=>{
+    if(!currentVid) return;
+    run.disabled=true;
+    const max=$('#vidmax').value||120;
+    $('#vidprog').style.width='40%';
+    setStatus($('#vidstatus'),'uploading + analyzing (this can take a while on CPU)…');
+    const fd=new FormData(); fd.append('file',currentVid);
+    if(max>0) fd.append('max_frames',max);
+    try{
+      const r=await fetch(API+'/analyze_video',{method:'POST',body:fd});
+      if(!r.ok){ const e=await r.json(); throw new Error(e.error||('HTTP '+r.status)); }
+      const j=await r.json();
+      $('#vidprog').style.width='100%';
+      showVideo(j);
+    }catch(e){ setStatus($('#vidstatus'),'error: '+e.message,'err'); $('#vidprog').style.width='0'; }
+    run.disabled=false;
+  });
+})();
+
+function showVideo(j){
+  setStatus($('#vidstatus'),`done — ${j.frames} frames · avg ${j.avg_ms} ms · ~${Math.round(1000/Math.max(j.avg_ms,1))} FPS`);
+  if(j.sample_base64){ $('#vidout').src='data:image/jpeg;base64,'+j.sample_base64; $('#vidout').style.display='block'; $('#vidplaceholder').style.display='none'; }
+  let mc=''; const wc=j.weather_counts||{};
+  $('#vidinfo').innerHTML=
+    '<div class="kv"><span>frames processed</span><b>'+esc(j.frames)+'</b></div>'+
+    '<div class="kv"><span>avg / min / max</span><b>'+esc(j.avg_ms)+' / '+esc(j.min_ms)+' / '+esc(j.max_ms)+' ms</b></div>'+
+    '<div class="kv"><span>est. throughput</span><b>~'+Math.round(1000/Math.max(j.avg_ms,1))+' FPS</b></div>'+
+    '<div class="kv"><span>frames with objects</span><b>'+esc(j.object_frames)+'</b></div>'+
+    '<div style="margin-top:8px">'+Object.keys(wc).map(k=>'<span class="chip">'+esc(k)+': '+esc(wc[k])+'</span>').join('')+'</div>';
+  if(j.video_url){
+    $('#viddl').style.display='inline-block';
+    $('#vidlink').style.display='inline';
+    $('#vidlink').href=j.video_url;
+    $('#viddl').onclick=()=>window.open(j.video_url,'_blank');
+  }
+}
+
+/* =================== live tab =================== */
+let liveStream=null, liveTimer=null;
+(function(){
+  const btn=$('#livebtn'), vid=$('#livevid'), cv=$('#livecanvas'), redraw=$('#liveredraw');
+  btn.addEventListener('click',async()=>{
+    if(liveStream){ // stop
+      liveStream.getTracks().forEach(t=>t.stop()); liveStream=null; clearInterval(liveTimer);
+      btn.textContent='Start live'; vid.hidden=true; croDraw=false; redraw.disabled=true; return;
+    }
+    try{
+      liveStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    }catch(e){ $('#livejson').textContent='camera error: '+e.message; return; }
+    vid.srcObject=liveStream; vid.hidden=false; btn.textContent='Stop live'; redraw.disabled=false;
+    btn.blur();
+    liveTimer=setInterval(sendFrame,700);
+    sendFrame();
+  });
+  let croDraw=false;
+  redraw.addEventListener('click',()=>drawLive());
+  function sendFrame(){
+    const cnv=document.createElement('canvas');
+    cnv.width=vid.videoWidth||640; cnv.height=vid.videoHeight||480;
+    cnv.getContext('2d').drawImage(vid,0,0);
+    cnv.toBlob(async b=>{
+      if(!b) return;
+      const fd=new FormData(); fd.append('file',b,'frame.jpg');
+      try{
+        const r=await fetch(API+'/detect',{method:'POST',body:fd});
+        if(!r.ok) return;
+        lastPacket=await r.json();
+        drawLive();
+      }catch(e){}
+    },'image/jpeg',0.6);
+  }
+  let lastPacket=null;
+  function drawLive(){
+    if(!lastPacket) return;
+    $('#livejson').textContent=JSON.stringify(lastPacket,null,2);
+    const w=cv.width=Math.max(vid.videoWidth||640,320), h=cv.height=Math.max(vid.videoHeight||480,180);
+    const ctx=cv.getContext('2d');
+    try{ ctx.drawImage(vid,0,0,w,h); }catch(e){}
+    ctx.lineWidth=2; ctx.strokeStyle='#22d3ee'; ctx.fillStyle='#22d3ee'; ctx.font='12px sans-serif'; ctx.textBaseline='top';
+    (lastPacket.objects||[]).forEach(o=>{
+      const x=w*o.x/100, y=h*o.y/100, bw=w*o.width/100, bh=h*o.height/100;
+      ctx.strokeRect(x,y,bw,bh); ctx.fillText(o.label,x,Math.max(0,y-12));
+    });
+    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillRect(0,h-22,w,22);
+    ctx.fillStyle='#e8eef6'; ctx.font='12px monospace';
+    ctx.fillText(`WX:${lastPacket.rain?'rain':'clear'}  lane:${lastPacket.lane||'-'}  light:${lastPacket.trafficLight||'-'}  limit:${lastPacket.speedLimit||'-'}  objs:${(lastPacket.objects||[]).length}`,6,h-6);
+  }
+})();
+
+/* =================== comparison =================== */
+async function loadComparison(){
+  try{
+    const r=await fetch(API+'/comparison'); const j=await r.json();
+    renderComparison(j.rows||[]);
+  }catch(e){ $('#compnote').textContent='comparison unavailable: '+e.message; }
+}
+function renderComparison(rows){
+  const tb=$('#comptbl tbody'); tb.innerHTML='';
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="8" class="muted">No rows in comparison.json yet — run <code>run_comparison</code>.</td></tr>'; drawChart([]); return; }
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${esc(r.model)}</b>${r.note&&r.note.includes('PIPELINE')?' <span class="muted">(random)</span>':''}</td>
+      <td class="num">${esc(r.accuracy)}</td><td class="num">${esc(r.precision)}</td>
+      <td class="num">${esc(r.recall)}</td><td class="num">${esc(r.f1)}</td>
+      <td class="num">${esc(r.inference_time_ms)}</td><td class="num">${esc(r.fps)}</td>
+      <td class="num">${esc(r.model_size_mb)} MB</td>`;
+    tb.appendChild(tr);
+  });
+  drawChart(rows);
+}
+function drawChart(rows){
+  const cv=$('#compchart'); if(!cv) return; const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,pad=40,bw=44;
+  ctx.clearRect(0,0,W,H);
+  if(!rows.length){ ctx.fillStyle='#8d9bb0'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('no data',W/2,H/2); return; }
+  ctx.textAlign='center'; ctx.font='12px sans-serif'; ctx.fillStyle='#e8eef6';
+  const metrics=[['accuracy','#4f9cff'],['f1','#34d399']];
+  rows.forEach((r,i)=>{
+    const baseX=pad+ i*((W-pad*2)/rows.length)+((W-pad*2)/rows.length)/2;
+    ctx.fillStyle='#cbd5e1'; ctx.font='12px sans-serif'; ctx.fillText(r.model,baseX,H-10);
+    metrics.forEach(([key,col],mi)=>{
+      const val=+(r[key]||0)*100;
+      const bw2=Math.min(24,(W-pad*2)/rows.length/2-6);
+      const x=baseX-(bw2+4)+mi*(bw2+4) + (mi?0:bw2*0);
+      const bh=(H-2*pad)*val/100;
+      ctx.fillStyle=col; ctx.fillRect(x-((W-pad*2)/rows.length/4), H-pad-bh, bw2, bh);
+    });
+  });
+  ctx.fillStyle='#8d9bb0'; ctx.font='12px sans-serif';
+  ctx.fillText('accuracy (blue) / f1 (green)  %',W/2,14);
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+  "accuracy": 0.745,
+  "precision_macro": 0.826007326007326,
+  "recall_macro": 0.745,
+  "f1_macro": 0.6966139012922681,
+  "precision_per_class": {
+    "clear": 0.5595238095238095,
+    "night": 0.9230769230769231,
+    "foggy": 0.8214285714285714,
+    "rainy": 1.0
+  },
+  "recall_per_class": {
+    "clear": 0.94,
+    "night": 0.96,
+    "foggy": 0.92,
+    "rainy": 0.16
+  },
+  "f1_per_class": {
+    "clear": 0.7014925373134329,
+    "night": 0.9411764705882353,
+    "foggy": 0.8679245283018868,
+    "rainy": 0.27586206896551724
+  },
+  "confusion_matrix": [
+    [
+      47,
+      0,
+      3,
+      0
+    ],
+    [
+      1,
+      48,
+      1,
+      0
+    ],
+    [
+      3,
+      1,
+      46,
+      0
+    ],
+    [
+      33,
+      3,
+      6,
+      8
+    ]
+  ],
+  "class_names": [
+    "clear",
+    "night",
+    "foggy",
+    "rainy"
+  ],
+  "latency_ms_per_image": 101.368,
+  "fps_estimated": 9.87,
+  "model_size_mb": 105.05,
+  "checkpoint": "models/swin/best.pt",
+  "model": "swin",
+  "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+}

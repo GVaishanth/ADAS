@@ -1,0 +1,30 @@
+{
+  "source": "current {Day,Night,Fog,Rain} folders",
+  "classes": [
+    "clear",
+    "night",
+    "foggy",
+    "rainy"
+  ],
+  "counts_per_split": {
+    "train": {
+      "clear": 400,
+      "night": 400,
+      "foggy": 400,
+      "rainy": 399
+    },
+    "val": {
+      "clear": 50,
+      "night": 50,
+      "foggy": 50,
+      "rainy": 50
+    },
+    "test": {
+      "clear": 50,
+      "night": 50,
+      "foggy": 50,
+      "rainy": 50
+    }
+  },
+  "total_images_used": 1999
+}

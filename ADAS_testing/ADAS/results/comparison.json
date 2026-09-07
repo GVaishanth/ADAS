@@ -1,0 +1,50 @@
+[
+  {
+    "model": "vit",
+    "accuracy": 0.95,
+    "precision": 0.9541,
+    "recall": 0.95,
+    "f1": 0.9493,
+    "inference_time_ms": 17.832,
+    "fps": 56.08,
+    "model_size_mb": 21.12,
+    "checkpoint": "models/vit/best.pt",
+    "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+  },
+  {
+    "model": "swin",
+    "accuracy": 0.745,
+    "precision": 0.826,
+    "recall": 0.745,
+    "f1": 0.6966,
+    "inference_time_ms": 101.368,
+    "fps": 9.87,
+    "model_size_mb": 105.05,
+    "checkpoint": "models/swin/best.pt",
+    "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+  },
+  {
+    "model": "convnext",
+    "accuracy": 0.985,
+    "precision": 0.9851,
+    "recall": 0.985,
+    "f1": 0.985,
+    "inference_time_ms": 75.637,
+    "fps": 13.22,
+    "model_size_mb": 106.19,
+    "checkpoint": "models/convnext/best.pt",
+    "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+  },
+  {
+    "model": "efficientformer",
+    "accuracy": 0.95,
+    "precision": 0.95,
+    "recall": 0.95,
+    "f1": 0.95,
+    "inference_time_ms": 31.727,
+    "fps": 31.52,
+    "model_size_mb": 43.69,
+    "checkpoint": "models/efficientformer/best.pt",
+    "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+  }
+]

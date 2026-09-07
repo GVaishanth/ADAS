@@ -1,0 +1,62 @@
+{
+  "accuracy": 0.95,
+  "precision_macro": 0.95,
+  "recall_macro": 0.95,
+  "f1_macro": 0.95,
+  "precision_per_class": {
+    "clear": 1.0,
+    "night": 1.0,
+    "foggy": 0.9,
+    "rainy": 0.9
+  },
+  "recall_per_class": {
+    "clear": 1.0,
+    "night": 1.0,
+    "foggy": 0.9,
+    "rainy": 0.9
+  },
+  "f1_per_class": {
+    "clear": 1.0,
+    "night": 1.0,
+    "foggy": 0.9,
+    "rainy": 0.9
+  },
+  "confusion_matrix": [
+    [
+      50,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      50,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      45,
+      5
+    ],
+    [
+      0,
+      0,
+      5,
+      45
+    ]
+  ],
+  "class_names": [
+    "clear",
+    "night",
+    "foggy",
+    "rainy"
+  ],
+  "latency_ms_per_image": 31.727,
+  "fps_estimated": 31.52,
+  "model_size_mb": 43.69,
+  "checkpoint": "models/efficientformer/best.pt",
+  "model": "efficientformer",
+  "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+}

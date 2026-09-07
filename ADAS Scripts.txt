@@ -1,0 +1,15 @@
+ADAS Scripts
+cd .\ADAS_testing\
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r ADAS\requirements.txt
+cd ..
+cd .\ADAS_frontend\
+npm install
+npm run build
+python make_inline.py
+cd ..
+cd .\ADAS_testing\
+cd .\ADAS\
+python -m algorithms._shared.run_comparison --epochs 30 --pretrained --augment
+python -m uvicorn integration.api.server:app --host 127.0.0.1 --port 7000

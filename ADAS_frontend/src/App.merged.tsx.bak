@@ -1,0 +1,621 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+
+/* ============================================================= *
+ *  Types (kept from the original ARES frontend, plus `weather`  *
+ *  and result objects for the new image / video / compare tabs) *
+ * ============================================================= */
+type TrafficLight = 'red' | 'yellow' | 'green' | null;
+type LaneState = 'steady' | 'changing-left' | 'changing-right' | null;
+type Gear = 'P' | 'R' | 'N' | 'D';
+type AlertTone = 'danger' | 'caution' | 'neutral' | 'go';
+type Tab = 'live' | 'image' | 'video' | 'compare';
+
+type DetectionBox = {
+  label: string; x: number; y: number; width: number; height: number;
+  confidence?: number;   // 0..1, from the backend tracker (colours the box)
+  ttc_s?: number | null;  // time-to-collision estimate, used for severity
+};
+
+export type DetectionPacket = {
+  source?: 'model' | 'demo';
+  vehicle?: { detected: boolean; distanceM: number; position: 'front' | 'rear-left' | 'rear-right' } | null;
+  rain?: boolean;
+  lane?: LaneState;
+  trafficLight?: TrafficLight;
+  speedLimit?: number | null;
+  roadSurface?: 'dry' | 'wet' | null;
+  gear?: Gear;
+  speedKph?: number;
+  objects?: DetectionBox[];
+  // added for the merged ADAS build:
+  weather?: string | null;
+  weatherConf?: number | null;
+};
+
+type ActiveAlert = { key: string; tone: AlertTone; category: string; title: string; message: string };
+
+const EMPTY_DETECTION: DetectionPacket = {
+  source: 'model', vehicle: null, rain: false, lane: null, trafficLight: null,
+  speedLimit: null, roadSurface: null, gear: 'D', speedKph: 0, objects: [],
+  weather: null, weatherConf: null,
+};
+
+/* ============================================================= *
+ *  Alerts (unchanged from ARES)                                 *
+ * ============================================================= */
+function getAlert(detection: DetectionPacket): ActiveAlert | null {
+  if (detection.vehicle?.detected) {
+    const position = detection.vehicle.position === 'rear-right' ? 'Rear right'
+      : detection.vehicle.position === 'rear-left' ? 'Rear left' : 'Ahead';
+    return { key: 'vehicle', tone: 'danger', category: 'Collision warning',
+      title: 'Vehicle approaching', message: `${position} / ${detection.vehicle.distanceM.toFixed(1)} m` };
+  }
+  if (detection.rain) {
+    return { key: 'rain', tone: 'caution', category: 'Weather warning',
+      title: 'Rain detected', message: 'Slow down and increase following distance' };
+  }
+  if (detection.lane === 'changing-left' || detection.lane === 'changing-right') {
+    return { key: 'lane', tone: 'neutral', category: 'Lane assistance',
+      title: 'Lane change detected', message: 'Check mirrors and maintain a safe gap' };
+  }
+  if (detection.trafficLight === 'red') {
+    return { key: 'red-light', tone: 'danger', category: 'Traffic signal',
+      title: 'Red light up ahead', message: 'Stop at the line' };
+  }
+  if (detection.trafficLight === 'yellow') {
+    return { key: 'yellow-light', tone: 'caution', category: 'Traffic signal',
+      title: 'Yellow light incoming', message: 'Slow down and prepare to stop' };
+  }
+  if (detection.trafficLight === 'green') {
+    return { key: 'green-light', tone: 'go', category: 'Traffic signal',
+      title: 'Green light', message: 'Go when the intersection is clear' };
+  }
+  return null;
+}
+
+/* ============================================================= *
+ *  Small helper components for the uploaded-result panels        *
+ * ============================================================= */
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat">
+      <span>{label}</span>
+      <b>{value}</b>
+    </div>
+  );
+}
+
+function TaskRow({ name, children }: { name: string; children: React.ReactNode }) {
+  return (
+    <div className="taskrow">
+      <div className="taskrow-name">{name}</div>
+      <div className="taskrow-body">{children}</div>
+    </div>
+  );
+}
+
+function TaskGrid({ tasks }: { tasks: Record<string, any> | null }) {
+  if (!tasks || typeof tasks !== 'object') return null;
+  const keys = Object.keys(tasks);
+  if (!keys.length) return <div className="muted">No task output.</div>;
+  return (
+    <div className="taskgrid">
+      {keys.map((k) => {
+        const v = tasks[k];
+        let body: React.ReactNode = <span className="muted">—</span>;
+        if (v?.status === 'error') body = <span className="err">{String(v.error)}</span>;
+        else if (v) {
+          if (k === 'weather') {
+            const top = v.results?.top_k || [];
+            body = <>
+              <div className="kv"><span>prediction</span><b>{v.prediction ?? '—'}</b></div>
+              <div className="kv"><span>confidence</span><b>{v.confidence != null ? Math.round(v.confidence * 100) + '%' : '—'}</b></div>
+              <div className="chips">{top.map((t: any, i: number) => <span className="chip" key={i}>{t.class} {Math.round((t.confidence || 0) * 100)}%</span>)}</div>
+            </>;
+          } else if (k === 'objects') {
+            const d = v.results?.detections || [];
+            body = <>
+              <div className="kv"><span>count</span><b>{d.length}</b></div>
+              <div className="chips">{d.slice(0, 14).map((o: any, i: number) => <span className="chip" key={i}>{o.class} {Math.round(o.confidence * 100)}%</span>)}</div>
+            </>;
+          } else if (k === 'lanes') {
+            body = <>
+              <div className="kv"><span>lanes found</span><b>{v.results?.num_lanes ?? 0}</b></div>
+              <div className="kv"><span>mode</span><b>{v.results?.mode ?? 'classical'}</b></div>
+            </>;
+          } else if (k === 'signs') {
+            const top = v.results?.top_k || [];
+            body = <>
+              <div className="kv"><span>prediction</span><b>{v.prediction ?? '—'}</b></div>
+              <div className="kv"><span>confidence</span><b>{v.confidence != null ? Math.round(v.confidence * 100) + '%' : '—'}</b></div>
+              <div className="chips">{top.slice(0, 3).map((t: any, i: number) => <span className="chip" key={i}>{t.class_name}</span>)}</div>
+            </>;
+          } else if (k === 'seg') {
+            const cl = v.results?.classes || [];
+            body = <>
+              <div className="kv"><span>classes</span><b>{v.results?.num_classes ?? 0}</b></div>
+              <div className="chips">{cl.slice(0, 10).map((c: any, i: number) => <span className="chip" key={i}>{c.class_name} {c.percent}%</span>)}</div>
+            </>;
+          } else {
+            body = <pre className="raw">{JSON.stringify(v).slice(0, 400)}</pre>;
+          }
+        }
+        return <TaskRow name={k} key={k}>{body}</TaskRow>;
+      })}
+    </div>
+  );
+}
+
+/* ============================================================= */
+export default function Home() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const pollRef = useRef<number | null>(null);
+
+  const [tab, setTab] = useState<Tab>('live');
+  const [cameraState, setCameraState] = useState<'idle' | 'starting' | 'active' | 'error'>('idle');
+  const [cameraError, setCameraError] = useState('');
+  const [detection, setDetection] = useState<DetectionPacket>(EMPTY_DETECTION);
+  const [dismissedAlert, setDismissedAlert] = useState<string | null>(null);
+  const [clock, setClock] = useState('10:42');
+  // ---- live inference metrics (FPS + latency) ----
+  const [inferMs, setInferMs] = useState(0);
+  const [fps, setFps] = useState(0);
+  const frameClockRef = useRef<number>(performance.now());
+
+  // ---- image upload tab ----
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgProgress, setImgProgress] = useState(0);
+  const [imgStatus, setImgStatus] = useState('');
+  const [imgResult, setImgResult] = useState<any>(null);
+
+  // ---- video upload tab ----
+  const [vidBusy, setVidBusy] = useState(false);
+  const [vidProgress, setVidProgress] = useState(0);
+  const [vidStatus, setVidStatus] = useState('');
+  const [vidResult, setVidResult] = useState<any>(null);
+
+  // ---- comparison tab ----
+  const [comparison, setComparison] = useState<any[]>([]);
+  const [compareNote, setCompareNote] = useState('');
+
+  /* ================= clock + event wiring (unchanged) ================ */
+  useEffect(() => {
+    const updateClock = () => setClock(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    updateClock();
+    const timer = window.setInterval(updateClock, 30000);
+
+    const handleModelDetection = (event: Event) => {
+      const packet = (event as CustomEvent<DetectionPacket>).detail;
+      if (!packet || typeof packet !== 'object') return;
+      setDetection({ ...EMPTY_DETECTION, ...packet, source: 'model' });
+    };
+    window.addEventListener('adas-detection', handleModelDetection);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('adas-detection', handleModelDetection);
+    };
+  }, []);
+
+  /* ================= detection filtering (unchanged) ================== */
+  // NOTE: uses `detection` (declared above) rather than `activeAlert`, which is
+  // only computed later via useMemo — referencing it here would throw a TDZ
+  // ReferenceError and blank the page.
+  const activeAlertKey = getAlert(detection)?.key ?? null;
+  useEffect(() => {
+    if (activeAlertKey !== dismissedAlert) setDismissedAlert(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAlertKey]);
+
+  /* ================= live camera ====================================== */
+  const stopCamera = useCallback(() => {
+    if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraState('idle');
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraState('starting');
+    setCameraError('');
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not available in this browser.');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      setDetection(EMPTY_DETECTION);
+      setCameraState('active');
+      // poll the backend every ~700 ms and emit the adas-detection event
+      // (the event handler above turns it into the ARES display state).
+      if (pollRef.current) window.clearInterval(pollRef.current);
+      pollRef.current = window.setInterval(sendFrame, 700);
+    } catch (error) {
+      setCameraError(error instanceof Error ? error.message : 'Camera permission was not granted.');
+      setCameraState('error');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function sendFrame() {
+    const vid = videoRef.current;
+    if (!vid || vid.readyState < 2) return;
+    // measure FPS (time between frame submissions) + round-trip latency
+    const now = performance.now();
+    const dt = now - frameClockRef.current;
+    frameClockRef.current = now;
+    if (dt > 0) setFps((p) => Math.round(p ? p * 0.8 + (1000 / dt) * 0.2 : 1000 / dt));
+    const t0 = now;
+    const cnv = document.createElement('canvas');
+    cnv.width = vid.videoWidth || 640;
+    cnv.height = vid.videoHeight || 480;
+    cnv.getContext('2d')!.drawImage(vid, 0, 0, cnv.width, cnv.height);
+    cnv.toBlob(async (blob) => {
+      if (!blob) return;
+      const fd = new FormData();
+      fd.append('file', blob, 'frame.jpg');
+      try {
+        const resp = await fetch('/detect', { method: 'POST', body: fd });
+        if (!resp.ok) return;
+        const packet = await resp.json();
+        packet.source = packet.source || 'model';
+        // prefer the backend's own model latency, else fall back to round-trip
+        const ms = packet.inference_time_ms || (performance.now() - t0);
+        setInferMs((p) => (p ? p * 0.6 + ms * 0.4 : ms));
+        window.dispatchEvent(new CustomEvent('adas-detection', { detail: packet }));
+      } catch { /* backend down — keep last frame */ }
+    }, 'image/jpeg', 0.7);
+  }
+
+  /* ================= reactive display values (unchanged) ============== */
+  const activeAlert = useMemo(() => getAlert(detection), [detection]);
+  const proximity = detection.vehicle?.detected
+    ? Math.min(1, Math.max(0.16, (12 - detection.vehicle.distanceM) / 10))
+    : 0;
+  const edgeStrength = activeAlert?.key === 'vehicle'
+    ? Math.min(1, proximity + (detection.gear === 'R' ? 0.12 : 0))
+    : activeAlert?.tone === 'danger' ? 0.58
+      : activeAlert?.tone === 'caution' ? 0.42
+        : activeAlert?.tone === 'go' ? 0.22 : 0;
+
+  const interfaceStyle = { '--edge-strength': edgeStrength } as CSSProperties;
+  const tone = activeAlert?.tone ?? 'idle';
+  const inputReady = cameraState === 'active';
+  const objectSummary = detection.vehicle?.detected
+    ? `Vehicle / ${detection.vehicle.distanceM.toFixed(1)} m`
+    : detection.objects?.length
+      ? `${detection.objects.length} object${detection.objects.length === 1 ? '' : 's'}`
+      : inputReady ? 'No object hazard' : 'Standby';
+  const laneSummary = detection.lane === 'changing-left' || detection.lane === 'changing-right'
+    ? 'Change detected' : detection.lane === 'steady' ? 'Lane tracking' : 'Standby';
+  // ---- proximity / severity (drives the meter + box emphasis) ----
+  const nearestTTC = detection.objects?.length
+    ? detection.objects.map((o) => o.ttc_s).filter((x): x is number => x != null).reduce((a, b) => Math.min(a, b), Infinity)
+    : null;
+  const severity = detection.vehicle?.detected
+    ? Math.min(1, Math.max(0.05, (12 - detection.vehicle.distanceM) / 11))
+    : nearestTTC != null && isFinite(nearestTTC)
+      ? Math.min(1, Math.max(0.05, (6 - nearestTTC) / 6))
+      : 0;
+
+  /* ================= image upload (with real upload progress) ========== */
+  async function uploadWithProgress(url: string, fd: FormData, onProgress: (p: number) => void) {
+    return new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+          else reject(new Error(body.error || `HTTP ${xhr.status}`));
+        } catch (e) { reject(new Error('Invalid server response')); }
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(fd);
+    });
+  }
+
+  async function runImage(file: File) {
+    setImgBusy(true); setImgProgress(0);
+    setImgStatus('uploading… (first run loads models)');
+    const fd = new FormData(); fd.append('file', file);
+    try {
+      const body = await uploadWithProgress('/analyze', fd, setImgProgress);
+      setImgResult(body);
+      setImgStatus('done');
+    } catch (e) { setImgStatus('error: ' + (e instanceof Error ? e.message : e)); }
+    setImgBusy(false);
+  }
+
+  /* ================= video upload (with real upload progress) ========== */
+  async function runVideo(file: File, maxFrames: number) {
+    setVidBusy(true); setVidProgress(0);
+    setVidStatus('uploading… (this can take a while on CPU)');
+    const fd = new FormData(); fd.append('file', file);
+    if (maxFrames > 0) fd.append('max_frames', String(maxFrames));
+    try {
+      const body = await uploadWithProgress('/analyze_video', fd, setVidProgress);
+      setVidStatus('analysing frames…');
+      setVidResult(body);
+      setVidStatus('done');
+    } catch (e) { setVidStatus('error: ' + (e instanceof Error ? e.message : e)); }
+    setVidBusy(false);
+  }
+
+  /* ================= comparison ======================================= */
+  useEffect(() => {
+    if (tab !== 'compare') return;
+    (async () => {
+      try {
+        const r = await fetch('/comparison');
+        const j = await r.json();
+        setComparison(j.rows || []);
+        setCompareNote('One command regenerates this table: python -m algorithms._shared.run_comparison --pretrained --epochs 30');
+      } catch (e) { setCompareNote('comparison unavailable: ' + (e instanceof Error ? e.message : e)); }
+    })();
+  }, [tab]);
+
+  const bestAcc = comparison.length ? Math.max(...comparison.map((r) => r.accuracy), 0) : 0;
+
+  /* ============================================================= */
+  return (
+    <main className={`vehicle-cabin tone-${tone}`} style={interfaceStyle}>
+      <div className="cabin-trim" aria-hidden="true" />
+      <section className="display-unit" aria-label="ADAS camera-based driver assistance display">
+        {/* ---------- system bar: brand + tabs + controls ---------- */}
+        <header className="system-bar">
+          <div className="product-name"><span className="product-mark">A</span><span>ADAS</span></div>
+          <div className="mode-description">Camera-based driver assistance</div>
+          <nav className="tabs" aria-label="ADAS views">
+            <button type="button" className={`tab ${tab === 'live' ? 'active' : ''}`} onClick={() => setTab('live')}>Live</button>
+            <button type="button" className={`tab ${tab === 'image' ? 'active' : ''}`} onClick={() => setTab('image')}>Image</button>
+            <button type="button" className={`tab ${tab === 'video' ? 'active' : ''}`} onClick={() => setTab('video')}>Video</button>
+            <button type="button" className={`tab ${tab === 'compare' ? 'active' : ''}`} onClick={() => setTab('compare')}>Compare</button>
+          </nav>
+          <div className="system-actions">
+            <button type="button" className={`camera-control ${cameraState === 'active' ? 'active' : ''}`}
+              onClick={cameraState === 'active' ? stopCamera : startCamera} disabled={cameraState === 'starting'}>
+              <i />{cameraState === 'active' ? 'Camera live' : cameraState === 'starting' ? 'Connecting' : 'Camera'}
+            </button>
+            <time>{clock}</time>
+          </div>
+        </header>
+
+        {/* ---------- LIVE (default) : the ARES camera view ---------- */}
+        {tab === 'live' && (
+          <section className={`camera-view ${inputReady ? 'input-ready' : ''}`} aria-label="Camera perception feed">
+            <video ref={videoRef} autoPlay muted playsInline aria-label="Camera feed" />
+            <canvas ref={canvasRef} className="feed-canvas" aria-hidden="true" />
+
+            {!inputReady && (
+              <div className="camera-empty">
+                <div className="camera-symbol" aria-hidden="true"><i /></div>
+                <h1>Connect the perception camera</h1>
+                <p>The camera is used as the live video input. Detection results appear directly on this screen.</p>
+                <div className="empty-actions">
+                  <button type="button" className="primary-action" onClick={startCamera} disabled={cameraState === 'starting'}>
+                    {cameraState === 'starting' ? 'Connecting camera...' : 'Connect camera'}
+                  </button>
+                </div>
+                {cameraError && <p className="camera-error">{cameraError}</p>}
+              </div>
+            )}
+
+            {inputReady && (
+              <div className="input-label">
+                <i />
+                <span><b>Laptop camera</b><small>Waiting for model detections</small></span>
+              </div>
+            )}
+
+            {/* weather / condition chip (added for the merged build) */}
+            {inputReady && (detection.weather || detection.weatherConf != null) && (
+              <div className={`weather-chip ${detection.rain ? 'chip-rain' : ''}`} aria-label={`Condition ${detection.weather ?? ''}`}>
+                <b>{detection.weather ?? 'unknown'}</b>
+                <small>{detection.weatherConf != null ? Math.round(detection.weatherConf * 100) + '%' : '—'}</small>
+              </div>
+            )}
+
+            {/* live inference metrics chip (FPS + latency) */}
+            {inputReady && (
+              <div className="inference-chip" aria-label="Live inference performance">
+                <span className={fps >= 10 ? 'ok' : fps >= 5 ? 'warn' : 'slow'}>{fps} FPS</span>
+                <span>{Math.round(inferMs)} ms</span>
+              </div>
+            )}
+
+            {/* proximity / severity meter */}
+            {inputReady && severity > 0 && (
+              <div className={`proximity-meter sev-${severity >= 0.66 ? 'high' : severity >= 0.33 ? 'mid' : 'low'}`}
+                aria-label={`Closure severity ${Math.round(severity * 100)} percent`}>
+                <span className="proximity-label">Closure</span>
+                <div className="proximity-track"><i style={{ width: `${Math.round(severity * 100)}%` }} /></div>
+                <span className="proximity-val">{nearestTTC != null && isFinite(nearestTTC) ? `${nearestTTC.toFixed(1)}s` : detection.vehicle ? `${detection.vehicle.distanceM.toFixed(1)}m` : '—'}</span>
+              </div>
+            )}
+
+            {inputReady && detection.roadSurface && (
+              <div className={`road-segmentation surface-${detection.roadSurface}`} aria-label={`${detection.roadSurface} drivable road area`}>
+                <span>Drivable area</span>
+              </div>
+            )}
+            {inputReady && detection.lane && (
+              <div className={`lane-overlay lane-${detection.lane}`} aria-label={`Lane detection: ${detection.lane}`}>
+                <i className="detected-lane lane-left" /><i className="detected-lane lane-right" />
+              </div>
+            )}
+            {inputReady && detection.objects?.map((object, index) => {
+              const conf = object.confidence ?? 1;
+              const confBucket = conf >= 0.8 ? 'high' : conf >= 0.5 ? 'mid' : 'low';
+              const kind = /car|truck|bus|motor|vehicle/i.test(object.label)
+                ? 'vehicle' : /person|pedestrian|rider/i.test(object.label) ? 'person' : 'other';
+              const ttc = object.ttc_s;
+              const hot = ttc != null && isFinite(ttc) && ttc < 4;
+              return (
+                <div
+                  className={`detection-frame conf-${confBucket} kind-${kind} ${detection.vehicle?.detected ? 'hazard-object' : ''} ${hot ? 'hot' : ''}`}
+                  key={`${object.label}-${index}`}
+                  style={{ left: `${object.x}%`, top: `${object.y}%`, width: `${object.width}%`, height: `${object.height}%` }}>
+                  <span>{object.label}{ttc != null && isFinite(ttc) ? ` ${ttc.toFixed(1)}s` : ''}{conf < 1 ? ` ${Math.round(conf * 100)}%` : ''}</span>
+                </div>
+              );
+            })}
+            {inputReady && detection.speedLimit && (
+              <div className="speed-sign" aria-label={`Detected speed limit ${detection.speedLimit}`}><span>{detection.speedLimit}</span><small>Speed limit</small></div>
+            )}
+            {inputReady && detection.trafficLight && (
+              <div className={`traffic-detection signal-${detection.trafficLight}`} aria-label={`${detection.trafficLight} traffic light detected`}>
+                <div className="signal-housing"><i /><i /><i /></div>
+                <span>{detection.trafficLight} light</span>
+              </div>
+            )}
+
+            {activeAlert && dismissedAlert !== activeAlert.key && (
+              <aside className={`warning-panel warning-${activeAlert.tone}`} role="alert" aria-live="assertive">
+                <span className="warning-symbol">!</span>
+                <div className="warning-copy"><small>{activeAlert.category}</small><strong>{activeAlert.title}</strong><p>{activeAlert.message}</p></div>
+                <button type="button" className="dismiss-warning" onClick={() => setDismissedAlert(activeAlert.key)} aria-label="Dismiss alert">Close</button>
+              </aside>
+            )}
+
+            <div className="drive-summary">
+              <span className="gear-indicator">{detection.gear ?? 'D'}</span>
+              <strong>{String(detection.speedKph ?? 0).padStart(2, '0')}</strong>
+              <small>km/h</small>
+            </div>
+            <div className="model-state">
+              <span className={inputReady ? 'ready' : ''} />{inputReady ? 'Perception input active' : 'Perception input standby'}
+            </div>
+          </section>
+        )}
+
+        {/* ---------- IMAGE upload panel ---------- */}
+        {tab === 'image' && (
+          <section className="tool-view" aria-label="Image analysis">
+            <div className="tool-col">
+              <h2>Upload a road image</h2>
+              <p className="muted">Runs the full pipeline: weather classification, YOLO object detection, lane detection, traffic-sign recognition and semantic segmentation.</p>
+              <input type="file" accept="image/*" id="imgupload" className="file-input" />
+              <label htmlFor="imgupload" className="file-label">Choose a .jpg / .png</label>
+              <button type="button" className="primary-action run" disabled={imgBusy}
+                onClick={() => { const f = (document.getElementById('imgupload') as HTMLInputElement).files?.[0]; if (f) runImage(f); }}>
+                {imgBusy ? (imgProgress < 100 ? `Uploading ${imgProgress}%` : 'Analysing…') : 'Analyse image'}
+              </button>
+              {imgBusy && <div className="progress-bar" aria-hidden="true"><i style={{ width: `${imgProgress}%` }} /></div>}
+              {imgStatus && <div className={`status ${imgStatus.startsWith('error') ? 'err' : ''}`}>{imgStatus}</div>}
+              {imgResult?.image_base64 && <img className="result-img" src={`data:image/jpeg;base64,${imgResult.image_base64}`} alt="annotated result" />}
+            </div>
+            {imgResult && (
+              <div className="tool-col">
+                <h2>Result</h2>
+                <div className="grid-metrics">
+                  <StatChip label="weather" value={imgResult.info?.weather || '—'} />
+                  <StatChip label="objects" value={String(imgResult.info?.objects ?? '—')} />
+                  <StatChip label="lanes" value={String(imgResult.info?.lanes ?? '—')} />
+                  <StatChip label="seg classes" value={String(imgResult.info?.seg_classes ?? '—')} />
+                  <StatChip label="inference" value={imgResult.inference_time_ms + ' ms'} />
+                </div>
+                <TaskGrid tasks={imgResult.tasks} />
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ---------- VIDEO upload panel ---------- */}
+        {tab === 'video' && (
+          <section className="tool-view" aria-label="Video analysis">
+            <div className="tool-col">
+              <h2>Upload a driving clip</h2>
+              <p className="muted">Processes each frame through the same pipeline and writes an annotated MP4. Limit frames for a quick test.</p>
+              <div className="row">
+                <input type="file" accept="video/*" id="vidupload" className="file-input" />
+                <label htmlFor="vidupload" className="file-label">Choose a .mp4</label>
+                <label className="muted">Max frames <input type="number" id="vidmax" defaultValue={120} min={1} style={{ width: 70 }} /></label>
+              </div>
+              <button type="button" className="primary-action run" disabled={vidBusy}
+                onClick={() => {
+                  const f = (document.getElementById('vidupload') as HTMLInputElement).files?.[0];
+                  const max = Number((document.getElementById('vidmax') as HTMLInputElement).value) || 120;
+                  if (f) runVideo(f, max);
+                }}>
+                {vidBusy ? (vidProgress < 100 ? `Uploading ${vidProgress}%` : 'Analysing…') : 'Analyse video'}
+              </button>
+              {vidBusy && <div className="progress-bar" aria-hidden="true"><i style={{ width: `${vidProgress}%` }} /></div>}
+              {vidStatus && <div className={`status ${vidStatus.startsWith('error') ? 'err' : ''}`}>{vidStatus}</div>}
+              {vidResult?.sample_base64 && <img className="result-img" src={`data:image/jpeg;base64,${vidResult.sample_base64}`} alt="sample annotated frame" />}
+            </div>
+            {vidResult && (
+              <div className="tool-col">
+                <h2>Video stats</h2>
+                <div className="grid-metrics">
+                  <StatChip label="frames" value={String(vidResult.frames)} />
+                  <StatChip label="avg ms" value={String(vidResult.avg_ms)} />
+                  <StatChip label="~FPS" value={String(Math.round(1000 / Math.max(vidResult.avg_ms, 1)))} />
+                  <StatChip label="obj frames" value={String(vidResult.object_frames)} />
+                </div>
+                <div className="chips">
+                  {Object.entries(vidResult.weather_counts || {}).map(([k, v]) => <span className="chip" key={k}>{k}: {String(v)}</span>)}
+                </div>
+                {vidResult.video_url && (
+                  <a className="url-link" href={vidResult.video_url} target="_blank" rel="noreferrer">Open annotated video</a>
+                )}
+                <div className="muted" style={{ marginTop: 10 }}>task breakdown per frame (averaged): {vidResult.avg_ms} ms/frame</div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ---------- COMPARISON tab ---------- */}
+        {tab === 'compare' && (
+          <section className="tool-view compare-view" aria-label="Model comparison">
+            <div className="tool-col wide">
+              <h2>Four-backbone comparison (Task 1)</h2>
+              <p className="muted">Same split, same preprocessing, same training budget — only the backbone differs.</p>
+              {comparison.length === 0 && <div className="muted">{compareNote || 'No rows yet — run the comparison command.'}</div>}
+              {comparison.length > 0 && (
+                <table className="compare-table">
+                  <thead><tr>
+                    <th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>Latency</th><th>FPS</th><th>Size</th>
+                  </tr></thead>
+                  <tbody>
+                    {comparison.map((r, i) => (
+                      <tr key={r.model} className={r.accuracy === bestAcc ? 'hi' : ''}>
+                        <td><b>{r.model}</b></td>
+                        <td className="num">{Math.round(r.accuracy * 100)}%</td>
+                        <td className="num">{Math.round(r.precision * 100)}%</td>
+                        <td className="num">{Math.round(r.recall * 100)}%</td>
+                        <td className="num">{Math.round(r.f1 * 100)}%</td>
+                        <td className="num">{r.inference_time_ms} ms</td>
+                        <td className="num">{r.fps}</td>
+                        <td className="num">{r.model_size_mb} MB</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <div className="muted" style={{ marginTop: 10 }}>{compareNote}</div>
+            </div>
+          </section>
+        )}
+
+        {/* ---------- footer status (unchanged) ---------- */}
+        <footer className="vehicle-status" aria-label="Current detection status">
+          <div><small>Object detection</small><strong>{objectSummary}</strong></div>
+          <div><small>Lane detection</small><strong>{laneSummary}</strong></div>
+          <div><small>Traffic light</small><strong className={detection.trafficLight ? `text-${detection.trafficLight}` : ''}>{detection.trafficLight ? `${detection.trafficLight[0].toUpperCase()}${detection.trafficLight.slice(1)}` : 'None'}</strong></div>
+          <div><small>Traffic sign</small><strong>{detection.speedLimit ? `${detection.speedLimit} km/h` : 'None'}</strong></div>
+          <div><small>Road condition</small><strong>{detection.rain ? 'Rain / slow down' : detection.roadSurface === 'wet' ? 'Wet' : detection.roadSurface === 'dry' ? 'Dry' : 'Standby'}</strong></div>
+        </footer>
+      </section>
+      <p className="prototype-note">ADAS, single frontend on port 7000. Camera detections are supplied by the backend model pipeline.</p>
+    </main>
+  );
+}

@@ -1,0 +1,63 @@
+{
+  "accuracy": 0.95,
+  "precision_macro": 0.9540579389650597,
+  "recall_macro": 0.95,
+  "f1_macro": 0.9493228020485917,
+  "precision_per_class": {
+    "clear": 0.9803921568627451,
+    "night": 1.0,
+    "foggy": 0.8596491228070176,
+    "rainy": 0.9761904761904762
+  },
+  "recall_per_class": {
+    "clear": 1.0,
+    "night": 1.0,
+    "foggy": 0.98,
+    "rainy": 0.82
+  },
+  "f1_per_class": {
+    "clear": 0.9900990099009901,
+    "night": 1.0,
+    "foggy": 0.9158878504672897,
+    "rainy": 0.8913043478260869
+  },
+  "confusion_matrix": [
+    [
+      50,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      50,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      49,
+      1
+    ],
+    [
+      1,
+      0,
+      8,
+      41
+    ]
+  ],
+  "class_names": [
+    "clear",
+    "night",
+    "foggy",
+    "rainy"
+  ],
+  "latency_ms_per_image": 17.832,
+  "fps_estimated": 56.08,
+  "model_size_mb": 21.12,
+  "checkpoint": "models/vit/best.pt",
+  "model": "vit",
+  "val_loss": 0.2345919954776764,
+  "note": "fine-tuned on current {Day,Night,Fog,Rain} dataset"
+}
