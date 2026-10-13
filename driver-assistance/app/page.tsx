@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import SensorPanel from './sensor-panel';
 
 type TrafficLight = 'red' | 'yellow' | 'green' | null;
 type LaneState = 'steady' | 'changing-left' | 'changing-right' | null;
@@ -311,6 +312,9 @@ export default function Home() {
             {inputReady ? 'Perception input active' : 'Perception input standby'}
           </div>
         </section>
+
+        {/* Live ESP32 readings (GET /sensor) — own row, same styling language. */}
+        <SensorPanel />
 
         <footer className="vehicle-status" aria-label="Current detection status">
           <div><small>Object detection</small><strong>{objectSummary}</strong></div>

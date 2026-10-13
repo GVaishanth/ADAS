@@ -35,7 +35,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script
           dangerouslySetInnerHTML={{
             __html: `window.__ADAS_BACKEND__ = (window.__ADAS_BACKEND__ || 'http://localhost:8000');
-window.__ADAS_POLL_MS__ = 700;`,
+window.__ADAS_POLL_MS__ = 700;
+window.__ADAS_SENSOR_URL__ = (window.__ADAS_SENSOR_URL__ || 'http://127.0.0.1:7000/sensor');`,
           }}
         />
         <script src="http://localhost:8000/adas_bridge.js" defer />

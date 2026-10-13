@@ -70,7 +70,7 @@ button { font: inherit; }
   height: min(880px, 91vh);
   min-height: 670px;
   display: grid;
-  grid-template-rows: 58px minmax(440px, 1fr) 78px;
+  grid-template-rows: 58px minmax(400px, 1fr) auto 78px;
   position: relative;
   z-index: 1;
   overflow: hidden;
@@ -211,6 +211,27 @@ button { font: inherit; }
 .gear-indicator { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid #b9bbb8; border-radius: 50%; color: #f1f1ef; font-size: 12px; font-weight: 700; }.drive-summary strong { font-size: 35px; font-weight: 400; line-height: .84; letter-spacing: -.05em; }.drive-summary small { color: #b1b4b1; font-size: 9px; }
 .model-state { position: absolute; z-index: 24; right: 18px; bottom: 17px; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 3px; color: #a6a9a6; background: rgba(15,17,18,.8); font-size: 8px; }.model-state > span { width: 6px; height: 6px; border-radius: 50%; background: #777a79; }.model-state > span.ready { background: #4b7c57; }
 
+.sensor-deck { display: grid; grid-template-columns: 196px minmax(0,1fr); align-items: center; gap: 16px; padding: 10px 17px; border-top: 1px solid #2b2e2f; background: #101213; }
+.sensor-state-block { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sensor-title { color: #818584; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+.sensor-state { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sensor-state i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #777a79; }
+.sensor-state b { color: #d7d8d5; font-size: 11px; font-weight: 600; }
+.sensor-state span { overflow: hidden; color: #8b8f8d; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.sensor-state.state-live i { background: #4b7c57; }.sensor-state.state-live b { color: #8fbf9a; }
+.sensor-state.state-stale i { background: #ca8d28; }.sensor-state.state-stale b { color: #d4a354; }
+.sensor-state.state-disconnected i { background: #b73934; }.sensor-state.state-disconnected b { color: #ce7772; }
+.sensor-updated { overflow: hidden; color: #74787a; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.sensor-tiles { display: flex; flex-wrap: wrap; gap: 7px; }
+.sensor-tile { flex: 1 1 104px; min-width: 92px; padding: 6px 9px; border: 1px solid #26292a; border-radius: 3px; background: #141617; }
+.sensor-tile small { display: block; overflow: hidden; color: #818584; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; text-overflow: ellipsis; white-space: nowrap; }
+.sensor-tile strong { display: block; margin-top: 3px; color: #e4e5e2; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.sensor-tile.is-primary strong { font-size: 16px; }
+.sensor-tile.is-unavailable strong { color: #6d7170; font-weight: 400; }
+.sensor-tile.tone-caution strong { color: #d3a051; }
+.sensor-unit { margin-left: 3px; color: #9a9d9b; font-size: 9px; font-weight: 400; }
+.sensor-tile.is-primary .sensor-unit { font-size: 10px; }
+
 .vehicle-status { display: grid; grid-template-columns: repeat(5,1fr); border-top: 1px solid #2b2e2f; background: #111314; }
 .vehicle-status > div { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 0 17px; border-right: 1px solid #2b2e2f; }.vehicle-status > div:last-child { border-right: 0; }
 .vehicle-status small { color: #818584; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }.vehicle-status strong { overflow: hidden; color: #dfdfdd; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }.vehicle-status .text-red { color: #d15a54; }.vehicle-status .text-yellow { color: #d3a051; }.vehicle-status .text-green { color: #70a17a; }
@@ -222,23 +243,25 @@ button { font: inherit; }
   .vehicle-cabin { padding: 18px 20px 42px; }
   .display-unit { width: 96vw; }
   .mode-description { display: none; }.system-bar { grid-template-columns: 1fr auto; }
-  .vehicle-status { grid-template-columns: repeat(3,1fr); height: auto; min-height: 110px; }.display-unit { grid-template-rows: 58px minmax(420px,1fr) auto; }.vehicle-status > div { min-height: 54px; }.vehicle-status > div:nth-child(3) { border-right: 0; }
+  .vehicle-status { grid-template-columns: repeat(3,1fr); height: auto; min-height: 110px; }.display-unit { grid-template-rows: 58px minmax(380px,1fr) auto auto; }.vehicle-status > div { min-height: 54px; }.vehicle-status > div:nth-child(3) { border-right: 0; }
+  .sensor-deck { grid-template-columns: 1fr; gap: 9px; }.sensor-state-block { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }.sensor-updated { margin-left: auto; }
 }
 
 @media (max-width: 700px) {
   .vehicle-cabin { display: block; overflow: auto; padding: 8px 8px 38px; }
   .vehicle-cabin::before, .cabin-trim { display: none; }
-  .display-unit { width: 100%; height: auto; min-height: 0; grid-template-rows: 56px 560px auto; border-radius: 13px; box-shadow: 0 22px 65px #000, 0 0 0 4px #030404; }
+  .display-unit { width: 100%; height: auto; min-height: 0; grid-template-rows: 56px 560px auto auto; border-radius: 13px; box-shadow: 0 22px 65px #000, 0 0 0 4px #030404; }
   .system-bar { padding: 0 12px; }.product-name { font-size: 11px; }.product-mark { width: 24px; height: 24px; }.system-actions { gap: 6px; }.demo-control { display: none; }.system-actions time { display: none; }
   .camera-empty { padding: 20px; }.camera-empty::before { inset: 14px; }.camera-empty h1 { font-size: 20px; }.camera-empty > p { max-width: 360px; }.empty-actions { flex-direction: column; width: min(290px,100%); }.primary-action,.secondary-action { width: 100%; }
   .warning-panel { top: 76px; right: 10px; width: calc(100% - 20px); grid-template-columns: 38px 1fr auto; gap: 9px; padding-left: 10px; }.warning-symbol { width: 37px; height: 36px; }.warning-copy strong { font-size: 15px; }.warning-copy p { font-size: 10px; }
   .input-label { left: 10px; top: 10px; }.traffic-detection { right: 7%; top: 29%; }.speed-sign { right: 21%; top: 37%; }.drive-summary { left: 10px; bottom: 10px; }.model-state { right: 10px; bottom: 10px; }
+  .sensor-deck { padding: 9px 12px; }.sensor-tile strong { font-size: 12px; }.sensor-tile.is-primary strong { font-size: 15px; }
   .vehicle-status { grid-template-columns: repeat(2,1fr); min-height: 0; }.vehicle-status > div { min-height: 65px; padding: 0 12px; }.vehicle-status > div:nth-child(3) { border-right: 1px solid #2b2e2f; }.vehicle-status > div:nth-child(even) { border-right: 0; }
   .prototype-note { position: static; padding-top: 16px; text-align: center; }
 }
 
 @media (max-width: 430px) {
-  .display-unit { grid-template-rows: 54px 500px auto; }.camera-control { font-size: 9px; }.camera-view::after { border-width: calc(1px + 3px * var(--edge-strength)); }
+  .display-unit { grid-template-rows: 54px 500px auto auto; }.sensor-tile { flex: 1 1 84px; min-width: 80px; }.sensor-state span { display: none; }.camera-control { font-size: 9px; }.camera-view::after { border-width: calc(1px + 3px * var(--edge-strength)); }
   .warning-panel { min-height: 76px; }.dismiss-warning { display: none; }.input-label { min-width: 168px; }.input-label small { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .model-state { display: none; }.drive-summary strong { font-size: 30px; }.speed-sign small,.traffic-detection > span { display: none; }
 }
